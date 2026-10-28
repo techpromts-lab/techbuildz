@@ -5,33 +5,25 @@ import { useAppStore } from "@/lib/store";
 import { Send, Loader2, Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// دالة استخراج الكود الجديدة والقوية جداً
 function extractFiles(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  
-  // صيغة 1: ### File: path/to/file.ext \n ```lang \n code ```
   const fileBlockRegex = /(?:###|##)?\s*(?:File|Filename):?\s*`?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`?\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/gi;
   let match;
   while ((match = fileBlockRegex.exec(text)) !== null) {
     out[match[1].trim()] = match[2].trim();
   }
-  
-  // صيغة 2 (احتياطية): **path/to/file.ext** \n ```lang \n code ```
   if (Object.keys(out).length === 0) {
      const boldFileRegex = /\*\*`?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`?\*\*\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
      while ((match = boldFileRegex.exec(text)) !== null) {
        out[match[1].trim()] = match[2].trim();
      }
   }
-
-  // صيغة 3 (احتياطية): `path/to/file.ext` \n ```lang \n code ```
   if (Object.keys(out).length === 0) {
      const backtickFileRegex = /`([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
      while ((match = backtickFileRegex.exec(text)) !== null) {
        out[match[1].trim()] = match[2].trim();
      }
   }
-
   return out;
 }
 
@@ -41,7 +33,7 @@ export default function AgentChat() {
   const files = project?.files || {};
   const activeFile = project?.activeFile || "";
   const messages = project?.messages || [];
-  const model = project?.model || "llama-3.3-70b-versatile";
+  const model = project?.model || "gemini-2.5-flash"; // التعديل هنا
   const environment = project?.environment || "empty";
 
   const [input, setInput] = useState("");
@@ -73,8 +65,6 @@ export default function AgentChat() {
       
       const reply: string = data.reply;
       addMessage({ role: "assistant", content: reply });
-
-      // استخراج الملفات وتحديثها
       const newFiles = extractFiles(reply);
       if (Object.keys(newFiles).length > 0) {
         setFiles({ ...files, ...newFiles });
@@ -91,7 +81,6 @@ export default function AgentChat() {
       <div className="h-9 flex items-center px-4 border-b border-border bg-card/50 text-xs font-medium">
         techpromts agent
       </div>
-
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
           <div className="text-xs text-muted-foreground text-center mt-8 px-4">
@@ -114,7 +103,6 @@ export default function AgentChat() {
           </div>
         )}
       </div>
-
       <div className="border-t border-border p-2">
         <div className="flex items-end gap-2">
           <textarea
