@@ -15,7 +15,7 @@ Do not skip the "### File: " prefix. Do not use any other format. Always give co
 
 export async function runTechpromtsAgent(
   messages: any[],
-  model: string = "gemini-2.5-flash"
+  model: string = "gemini-3.8-flash"
 ) {
   const response = await geminiChatCompletion({
     model,
