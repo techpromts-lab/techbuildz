@@ -17,18 +17,15 @@ interface AppState {
   projects: Record<string, Project>;
   activeProjectId: string | null;
   
-  // UI State
   showChat: boolean;
   showSettings: boolean;
   viewMode: "split" | "code" | "preview";
   isGenerating: boolean;
 
-  // Actions
   createProject: (name: string, env: Environment) => string;
   deleteProject: (id: string) => void;
   setActiveProjectId: (id: string) => void;
   
-  // Active Project Actions
   updateFile: (path: string, content: string) => void;
   addFile: (path: string) => void;
   setActiveFile: (path: string) => void;
@@ -39,7 +36,6 @@ interface AppState {
   addMessage: (msg: { role: "user" | "assistant"; content: string }) => void;
   resetProject: () => void;
   
-  // UI Actions
   setShowChat: (v: boolean) => void;
   setShowSettings: (v: boolean) => void;
   setViewMode: (mode: "split" | "code" | "preview") => void;
@@ -161,7 +157,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "techbuildz-storage",
-      partialize: (state) => ({ projects: state.projects }), // يحفظ المشاريع فقط
+      partialize: (state) => ({ projects: state.projects }),
     }
   )
 );
