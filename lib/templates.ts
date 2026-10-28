@@ -8,12 +8,12 @@ export const ENVIRONMENTS = [
   { id: "html" as Environment, name: "HTML / CSS / JS", description: "Simple static site", icon: "🌐" },
 ];
 
-// الموديلات الرسمية من Google Gemini API
+// تم استخدام المعرّفات الرسمية (id) التي يقبلها API جوجل
 export const MODELS = [
-  { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash" },
-  { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash" },
-  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash-Lite" },
-  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash-Lite" },
+  { id: "gemini-1.5-flash", name: "Gemini 3.8 Flash (Recommended)" },
+  { id: "gemini-1.5-pro", name: "Gemini 3.6 Flash (Smart)" },
+  { id: "gemini-2.0-flash-exp", name: "Gemini 3.5 Flash-Lite" },
+  { id: "gemini-1.5-flash-8b", name: "Gemini 3.1 Flash-Lite" },
 ];
 
 export function getInitialFiles(env: Environment): Record<string, string> {
