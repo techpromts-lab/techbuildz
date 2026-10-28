@@ -5,17 +5,14 @@ import { useAppStore } from "@/lib/store";
 import { getWebContainer } from "@/lib/webcontainer";
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react";
 
-type Status =
-  | "idle"
-  | "booting"
-  | "mounting"
-  | "installing"
-  | "starting"
-  | "ready"
-  | "error";
+type Status = "idle" | "booting" | "mounting" | "installing" | "starting" | "ready" | "error";
 
 export default function Preview() {
-  const { files, environment } = useAppStore();
+  const { projects, activeProjectId } = useAppStore();
+  const project = projects[activeProjectId || ""];
+  const files = project?.files || {};
+  const environment = project?.environment || "empty";
+  
   const [url, setUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +34,11 @@ export default function Preview() {
     setError(null);
     setUrl(null);
 
+    if (environment === "empty" || Object.keys(files).length === 0) {
+      setStatus("idle");
+      return;
+    }
+
     if (environment === "html") {
       setStatus("ready");
       return;
@@ -47,18 +49,13 @@ export default function Preview() {
       const wc = await getWebContainer();
       if (runId !== runIdRef.current) return;
 
-      // Remount fresh whenever environment changed (or first time)
-      if (mountedEnvRef.current !== environment) {
+      // إعادة التركيب لو غيرنا البيئة أو المشروع
+      if (mountedEnvRef.current !== `${activeProjectId}-${environment}`) {
         setStatus("mounting");
         await wc.mount(
-          Object.fromEntries(
-            Object.entries(files).map(([path, content]) => [
-              path,
-              { file: { contents: content } },
-            ])
-          )
+          Object.fromEntries(Object.entries(files).map(([path, content]) => [path, { file: { contents: content } }]))
         );
-        mountedEnvRef.current = environment;
+        mountedEnvRef.current = `${activeProjectId}-${environment}`;
       }
       if (runId !== runIdRef.current) return;
 
@@ -75,9 +72,7 @@ export default function Preview() {
       if (runId !== runIdRef.current) return;
 
       setStatus("starting");
-      wc.spawn("npm", ["run", "dev"]).catch((e) =>
-        console.error("[dev spawn]", e)
-      );
+      wc.spawn("npm", ["run", "dev"]).catch((e) => console.error("[dev spawn]", e));
     } catch (e: any) {
       if (runId !== runIdRef.current) return;
       console.error(e);
@@ -86,22 +81,13 @@ export default function Preview() {
     }
   }
 
-  // Re-run whenever environment changes
   useEffect(() => {
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [environment]);
+  }, [environment, activeProjectId]);
 
-  // Auto-sync file edits (from CodeEditor or AgentChat) into WebContainer
   useEffect(() => {
-    if (
-      environment === "html" ||
-      mountedEnvRef.current !== environment ||
-      status !== "ready"
-    ) {
-      return;
-    }
-
+    if (environment === "html" || mountedEnvRef.current !== `${activeProjectId}-${environment}` || status !== "ready") return;
     const timer = setTimeout(async () => {
       try {
         const wc = await getWebContainer();
@@ -112,22 +98,23 @@ export default function Preview() {
         console.error("[preview sync]", e);
       }
     }, 800);
-
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, status]);
 
-  // HTML environment — static render
+  if (environment === "empty" || Object.keys(files).length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground">
+        <p className="text-sm">Nothing to preview.</p>
+        <p className="text-xs mt-1">Create files or ask the AI to generate code.</p>
+      </div>
+    );
+  }
+
   if (environment === "html") {
     return (
       <div className="h-full w-full bg-white">
-        <iframe
-          ref={iframeRef}
-          className="w-full h-full border-0"
-          srcDoc={buildHtml()}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
-          title="preview"
-        />
+        <iframe ref={iframeRef} className="w-full h-full border-0" srcDoc={buildHtml()} sandbox="allow-scripts allow-same-origin allow-forms allow-modals" title="preview" />
       </div>
     );
   }
@@ -137,13 +124,7 @@ export default function Preview() {
       <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
         <AlertCircle className="w-10 h-10 text-danger" />
         <p className="text-sm text-muted-foreground">{error}</p>
-        <button
-          onClick={() => {
-            mountedEnvRef.current = null;
-            run();
-          }}
-          className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm flex items-center gap-2"
-        >
+        <button onClick={() => { mountedEnvRef.current = null; run(); }} className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm flex items-center gap-2">
           <RefreshCw className="w-4 h-4" /> Retry
         </button>
       </div>
@@ -162,23 +143,11 @@ export default function Preview() {
   return (
     <div className="h-full w-full bg-white relative">
       <div className="absolute top-2 right-2 z-10">
-        <button
-          onClick={() => {
-            mountedEnvRef.current = null;
-            run();
-          }}
-          className="p-2 bg-card/90 border border-border rounded-lg hover:border-primary/50"
-          title="Restart"
-        >
+        <button onClick={() => { mountedEnvRef.current = null; run(); }} className="p-2 bg-card/90 border border-border rounded-lg hover:border-primary/50" title="Restart">
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
-      <iframe
-        ref={iframeRef}
-        className="w-full h-full border-0"
-        src={url}
-        title="preview"
-      />
+      <iframe ref={iframeRef} className="w-full h-full border-0" src={url} title="preview" />
     </div>
   );
 }
