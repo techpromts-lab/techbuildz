@@ -5,15 +5,33 @@ import { useAppStore } from "@/lib/store";
 import { Send, Loader2, Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// دالة استخراج الكود الجديدة والقوية جداً
 function extractFiles(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  const regex = /(?:`([\w./-]+\.[a-zA-Z0-9]+)`|\*\*([\w./-]+\.[a-zA-Z0-9]+)\*\*|^([\w./-]+\.[a-zA-Z0-9]+)\s*$)\s*\n*```[a-zA-Z0-9]*\n([\s\S]*?)```/gm;
-  let m: RegExpExecArray | null;
-  while ((m = regex.exec(text)) !== null) {
-    const name = m[1] || m[2] || m[3];
-    const code = m[4];
-    if (name && code) out[name] = code.replace(/\n$/, "");
+  
+  // صيغة 1: ### File: path/to/file.ext \n ```lang \n code ```
+  const fileBlockRegex = /(?:###|##)?\s*(?:File|Filename):?\s*`?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`?\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/gi;
+  let match;
+  while ((match = fileBlockRegex.exec(text)) !== null) {
+    out[match[1].trim()] = match[2].trim();
   }
+  
+  // صيغة 2 (احتياطية): **path/to/file.ext** \n ```lang \n code ```
+  if (Object.keys(out).length === 0) {
+     const boldFileRegex = /\*\*`?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`?\*\*\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
+     while ((match = boldFileRegex.exec(text)) !== null) {
+       out[match[1].trim()] = match[2].trim();
+     }
+  }
+
+  // صيغة 3 (احتياطية): `path/to/file.ext` \n ```lang \n code ```
+  if (Object.keys(out).length === 0) {
+     const backtickFileRegex = /`([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
+     while ((match = backtickFileRegex.exec(text)) !== null) {
+       out[match[1].trim()] = match[2].trim();
+     }
+  }
+
   return out;
 }
 
@@ -43,7 +61,7 @@ export default function AgentChat() {
     try {
       const contextMsg = {
         role: "user" as const,
-        content: `Environment: ${environment}\nCurrent files: ${Object.keys(files).join(", ") || "None"}\nActive file: ${activeFile || "None"}\n\n${text}`,
+        content: `Environment: ${environment}\nCurrent files: ${Object.keys(files).join(", ") || "None"}\nActive file: ${activeFile || "None"}\n\nUser request: ${text}`,
       };
       const res = await fetch("/api/agent", {
         method: "POST",
@@ -51,16 +69,18 @@ export default function AgentChat() {
         body: JSON.stringify({ model, messages: [...messages, contextMsg] }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
+      if (!res.ok) throw new Error(data.error || "Failed to get response from AI");
+      
       const reply: string = data.reply;
       addMessage({ role: "assistant", content: reply });
 
+      // استخراج الملفات وتحديثها
       const newFiles = extractFiles(reply);
       if (Object.keys(newFiles).length > 0) {
         setFiles({ ...files, ...newFiles });
       }
     } catch (e: any) {
-      addMessage({ role: "assistant", content: `⚠️ ${e.message}` });
+      addMessage({ role: "assistant", content: `⚠️ Error: ${e.message}` });
     } finally {
       setIsGenerating(false);
     }
@@ -90,7 +110,7 @@ export default function AgentChat() {
         ))}
         {isGenerating && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> thinking...
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> generating code...
           </div>
         )}
       </div>
