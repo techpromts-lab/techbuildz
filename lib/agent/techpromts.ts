@@ -1,4 +1,4 @@
-import { groqChatCompletion } from "../groq";
+import { geminiChatCompletion } from "../gemini";
 
 const SYSTEM_PROMPT = `You are techpromts agent, the official AI coding agent of techbuildz by techpromts.
 Write clean, modern code (Next.js 15, React 19, TypeScript, Tailwind).
@@ -15,12 +15,12 @@ Do not skip the "### File: " prefix. Do not use any other format. Always give co
 
 export async function runTechpromtsAgent(
   messages: any[],
-  model: string = "llama-3.3-70b-versatile"
+  model: string = "gemini-2.5-flash"
 ) {
-  const response = await groqChatCompletion({
+  const response = await geminiChatCompletion({
     model,
     messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-    temperature: 0.2, // تقليل العشوائية لضمان كتابة كود دقيق
+    temperature: 0.2,
     max_tokens: 8192,
   });
 
