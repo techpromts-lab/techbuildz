@@ -33,7 +33,7 @@ export default function AgentChat() {
   const files = project?.files || {};
   const activeFile = project?.activeFile || "";
   const messages = project?.messages || [];
-  const model = project?.model || "gemini-2.5-flash"; // التعديل هنا
+  const model = project?.model || "gemini-3.8-flash"; // الموديل الافتراضي الجديد
   const environment = project?.environment || "empty";
 
   const [input, setInput] = useState("");
