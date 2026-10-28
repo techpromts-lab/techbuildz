@@ -1,52 +1,167 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { Environment, getInitialFiles } from "./templates";
 
-interface AppState {
+export interface Project {
+  id: string;
+  name: string;
+  environment: Environment;
   files: Record<string, string>;
   activeFile: string;
-  environment: Environment;
+  messages: { role: "user" | "assistant"; content: string }[];
   model: string;
+  updatedAt: number;
+}
+
+interface AppState {
+  projects: Record<string, Project>;
+  activeProjectId: string | null;
+  
+  // UI State
   showChat: boolean;
   showSettings: boolean;
   viewMode: "split" | "code" | "preview";
-  messages: { role: "user" | "assistant"; content: string }[];
   isGenerating: boolean;
-  setFiles: (files: Record<string, string>) => void;
+
+  // Actions
+  createProject: (name: string, env: Environment) => string;
+  deleteProject: (id: string) => void;
+  setActiveProjectId: (id: string) => void;
+  
+  // Active Project Actions
   updateFile: (path: string, content: string) => void;
+  addFile: (path: string) => void;
   setActiveFile: (path: string) => void;
+  setFiles: (files: Record<string, string>) => void;
+  updateProjectName: (name: string) => void;
   setEnvironment: (env: Environment) => void;
   setModel: (model: string) => void;
+  addMessage: (msg: { role: "user" | "assistant"; content: string }) => void;
+  resetProject: () => void;
+  
+  // UI Actions
   setShowChat: (v: boolean) => void;
   setShowSettings: (v: boolean) => void;
   setViewMode: (mode: "split" | "code" | "preview") => void;
-  addMessage: (msg: { role: "user" | "assistant"; content: string }) => void;
   setIsGenerating: (v: boolean) => void;
-  resetProject: (env: Environment) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  files: getInitialFiles("nextjs"),
-  activeFile: "app/page.tsx",
-  environment: "nextjs",
-  model: "llama-3.3-70b-versatile",
-  showChat: true,
-  showSettings: false,
-  viewMode: "split",
-  messages: [],
-  isGenerating: false,
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      projects: {},
+      activeProjectId: null,
+      
+      showChat: true,
+      showSettings: false,
+      viewMode: "split",
+      isGenerating: false,
 
-  setFiles: (files) => set({ files }),
-  updateFile: (path, content) => set((s) => ({ files: { ...s.files, [path]: content } })),
-  setActiveFile: (path) => set({ activeFile: path }),
-  setEnvironment: (env) => set({ environment: env }),
-  setModel: (model) => set({ model }),
-  setShowChat: (v) => set({ showChat: v }),
-  setShowSettings: (v) => set({ showSettings: v }),
-  setViewMode: (mode) => set({ viewMode: mode }),
-  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-  setIsGenerating: (v) => set({ isGenerating: v }),
-  resetProject: (env) => {
-    const files = getInitialFiles(env);
-    set({ environment: env, files, activeFile: Object.keys(files)[0], messages: [] });
-  },
-}));
+      createProject: (name, env) => {
+        const id = crypto.randomUUID();
+        const files = getInitialFiles(env);
+        const newProject: Project = {
+          id,
+          name: name || "Untitled Project",
+          environment: env,
+          files,
+          activeFile: Object.keys(files)[0] || "",
+          messages: [],
+          model: "llama-3.3-70b-versatile",
+          updatedAt: Date.now(),
+        };
+        
+        set((s) => ({
+          projects: { ...s.projects, [id]: newProject },
+          activeProjectId: id,
+        }));
+        return id;
+      },
+
+      deleteProject: (id) => {
+        set((s) => {
+          const newProjects = { ...s.projects };
+          delete newProjects[id];
+          return {
+            projects: newProjects,
+            activeProjectId: s.activeProjectId === id ? null : s.activeProjectId,
+          };
+        });
+      },
+
+      setActiveProjectId: (id) => set({ activeProjectId: id }),
+
+      updateFile: (path, content) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return {
+          projects: { ...s.projects, [p.id]: { ...p, files: { ...p.files, [path]: content }, updatedAt: Date.now() } }
+        };
+      }),
+
+      addFile: (path) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return {
+          projects: { ...s.projects, [p.id]: { ...p, files: { ...p.files, [path]: "" }, activeFile: path, updatedAt: Date.now() } }
+        };
+      }),
+
+      setActiveFile: (path) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return { projects: { ...s.projects, [p.id]: { ...p, activeFile: path } } };
+      }),
+
+      setFiles: (files) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return {
+          projects: { ...s.projects, [p.id]: { ...p, files, updatedAt: Date.now() } }
+        };
+      }),
+
+      updateProjectName: (name) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return { projects: { ...s.projects, [p.id]: { ...p, name, updatedAt: Date.now() } } };
+      }),
+
+      setEnvironment: (env) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return { projects: { ...s.projects, [p.id]: { ...p, environment: env } } };
+      }),
+
+      setModel: (model) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return { projects: { ...s.projects, [p.id]: { ...p, model } } };
+      }),
+
+      addMessage: (msg) => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        return { projects: { ...s.projects, [p.id]: { ...p, messages: [...p.messages, msg] } } };
+      }),
+
+      resetProject: () => set((s) => {
+        const p = s.projects[s.activeProjectId!];
+        if (!p) return s;
+        const files = getInitialFiles(p.environment);
+        return {
+          projects: { ...s.projects, [p.id]: { ...p, files, activeFile: Object.keys(files)[0] || "", messages: [], updatedAt: Date.now() } }
+        };
+      }),
+
+      setShowChat: (v) => set({ showChat: v }),
+      setShowSettings: (v) => set({ showSettings: v }),
+      setViewMode: (mode) => set({ viewMode: mode }),
+      setIsGenerating: (v) => set({ isGenerating: v }),
+    }),
+    {
+      name: "techbuildz-storage",
+      partialize: (state) => ({ projects: state.projects }), // يحفظ المشاريع فقط
+    }
+  )
+);
