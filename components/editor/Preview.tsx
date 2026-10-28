@@ -3,15 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { getWebContainer } from "@/lib/webcontainer";
-import { Play, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, AlertCircle } from "lucide-react";
+
+type Status =
+  | "idle"
+  | "booting"
+  | "mounting"
+  | "installing"
+  | "starting"
+  | "ready"
+  | "error";
 
 export default function Preview() {
   const { files, environment } = useAppStore();
   const [url, setUrl] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "booting" | "installing" | "starting" | "ready" | "error">("idle");
+  const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const bootedRef = useRef(false);
+  const runIdRef = useRef(0);
+  const mountedEnvRef = useRef<string | null>(null);
 
   const buildHtml = () => {
     const html = files["index.html"] || "";
@@ -23,7 +33,10 @@ export default function Preview() {
   };
 
   async function run() {
+    const runId = ++runIdRef.current;
     setError(null);
+    setUrl(null);
+
     if (environment === "html") {
       setStatus("ready");
       return;
@@ -32,8 +45,11 @@ export default function Preview() {
     try {
       setStatus("booting");
       const wc = await getWebContainer();
+      if (runId !== runIdRef.current) return;
 
-      if (!bootedRef.current) {
+      // Remount fresh whenever environment changed (or first time)
+      if (mountedEnvRef.current !== environment) {
+        setStatus("mounting");
         await wc.mount(
           Object.fromEntries(
             Object.entries(files).map(([path, content]) => [
@@ -42,15 +58,12 @@ export default function Preview() {
             ])
           )
         );
-        bootedRef.current = true;
-      } else {
-        // sync updates
-        for (const [path, content] of Object.entries(files)) {
-          await wc.fs.writeFile(path, content);
-        }
+        mountedEnvRef.current = environment;
       }
+      if (runId !== runIdRef.current) return;
 
       wc.on("server-ready", (_port, serverUrl) => {
+        if (runId !== runIdRef.current) return;
         setUrl(serverUrl);
         setStatus("ready");
       });
@@ -59,23 +72,53 @@ export default function Preview() {
       const install = await wc.spawn("npm", ["install"]);
       install.output.pipeTo(new WritableStream({ write: (d) => console.log(d) }));
       await install.exit;
+      if (runId !== runIdRef.current) return;
 
       setStatus("starting");
-      const dev = await wc.spawn("npm", ["run", "dev"]);
-      dev.output.pipeTo(new WritableStream({ write: (d) => console.log(d) }));
+      wc.spawn("npm", ["run", "dev"]).catch((e) =>
+        console.error("[dev spawn]", e)
+      );
     } catch (e: any) {
+      if (runId !== runIdRef.current) return;
       console.error(e);
       setError(e.message || "Failed to start preview");
       setStatus("error");
     }
   }
 
+  // Re-run whenever environment changes
   useEffect(() => {
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [environment]);
 
-  if (environment === "html" && status === "ready") {
+  // Auto-sync file edits (from CodeEditor or AgentChat) into WebContainer
+  useEffect(() => {
+    if (
+      environment === "html" ||
+      mountedEnvRef.current !== environment ||
+      status !== "ready"
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const wc = await getWebContainer();
+        for (const [path, content] of Object.entries(files)) {
+          await wc.fs.writeFile(path, content);
+        }
+      } catch (e) {
+        console.error("[preview sync]", e);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, status]);
+
+  // HTML environment — static render
+  if (environment === "html") {
     return (
       <div className="h-full w-full bg-white">
         <iframe
@@ -95,7 +138,10 @@ export default function Preview() {
         <AlertCircle className="w-10 h-10 text-danger" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <button
-          onClick={run}
+          onClick={() => {
+            mountedEnvRef.current = null;
+            run();
+          }}
           className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm flex items-center gap-2"
         >
           <RefreshCw className="w-4 h-4" /> Retry
@@ -117,7 +163,10 @@ export default function Preview() {
     <div className="h-full w-full bg-white relative">
       <div className="absolute top-2 right-2 z-10">
         <button
-          onClick={run}
+          onClick={() => {
+            mountedEnvRef.current = null;
+            run();
+          }}
           className="p-2 bg-card/90 border border-border rounded-lg hover:border-primary/50"
           title="Restart"
         >
