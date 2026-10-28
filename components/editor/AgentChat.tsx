@@ -7,9 +7,7 @@ import { cn } from "@/lib/utils";
 
 function extractFiles(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  // patterns like: `filename.tsx`  OR **filename.tsx**  OR  filename.tsx  before ```
-  const regex =
-    /(?:`([\w./-]+\.[a-zA-Z0-9]+)`|\*\*([\w./-]+\.[a-zA-Z0-9]+)\*\*|^([\w./-]+\.[a-zA-Z0-9]+)\s*$)\s*\n*```[a-zA-Z0-9]*\n([\s\S]*?)```/gm;
+  const regex = /(?:`([\w./-]+\.[a-zA-Z0-9]+)`|\*\*([\w./-]+\.[a-zA-Z0-9]+)\*\*|^([\w./-]+\.[a-zA-Z0-9]+)\s*$)\s*\n*```[a-zA-Z0-9]*\n([\s\S]*?)```/gm;
   let m: RegExpExecArray | null;
   while ((m = regex.exec(text)) !== null) {
     const name = m[1] || m[2] || m[3];
@@ -20,8 +18,14 @@ function extractFiles(text: string): Record<string, string> {
 }
 
 export default function AgentChat() {
-  const { messages, addMessage, isGenerating, setIsGenerating, model, files, setFiles, activeFile } =
-    useAppStore();
+  const { projects, activeProjectId, addMessage, isGenerating, setIsGenerating, setFiles } = useAppStore();
+  const project = projects[activeProjectId || ""];
+  const files = project?.files || {};
+  const activeFile = project?.activeFile || "";
+  const messages = project?.messages || [];
+  const model = project?.model || "llama-3.3-70b-versatile";
+  const environment = project?.environment || "empty";
+
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -39,18 +43,12 @@ export default function AgentChat() {
     try {
       const contextMsg = {
         role: "user" as const,
-        content:
-          `Current files: ${Object.keys(files).join(", ")}\n` +
-          `Active file: ${activeFile}\n\n` +
-          text,
+        content: `Environment: ${environment}\nCurrent files: ${Object.keys(files).join(", ") || "None"}\nActive file: ${activeFile || "None"}\n\n${text}`,
       };
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: [...messages, contextMsg],
-        }),
+        body: JSON.stringify({ model, messages: [...messages, contextMsg] }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -82,17 +80,8 @@ export default function AgentChat() {
         )}
         {messages.map((m, i) => (
           <div key={i} className="flex gap-2">
-            <div
-              className={cn(
-                "w-6 h-6 rounded-md flex items-center justify-center shrink-0",
-                m.role === "user" ? "bg-secondary" : "bg-primary/20"
-              )}
-            >
-              {m.role === "user" ? (
-                <User className="w-3.5 h-3.5" />
-              ) : (
-                <Bot className="w-3.5 h-3.5 text-primary" />
-              )}
+            <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0", m.role === "user" ? "bg-secondary" : "bg-primary/20")}>
+              {m.role === "user" ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5 text-primary" />}
             </div>
             <div className="text-xs leading-relaxed whitespace-pre-wrap break-words flex-1 pt-0.5">
               {m.content}
@@ -121,11 +110,7 @@ export default function AgentChat() {
             placeholder="Ask techpromts agent..."
             className="flex-1 resize-none bg-card border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary/60"
           />
-          <button
-            onClick={send}
-            disabled={isGenerating || !input.trim()}
-            className="p-2 bg-primary hover:bg-primary-hover disabled:opacity-40 rounded-lg"
-          >
+          <button onClick={send} disabled={isGenerating || !input.trim()} className="p-2 bg-primary hover:bg-primary-hover disabled:opacity-40 rounded-lg">
             <Send className="w-4 h-4 text-white" />
           </button>
         </div>
