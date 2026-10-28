@@ -36,14 +36,23 @@ export default function HomePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow shrink-0">
               <Code2 className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">tech<span className="text-primary">buildz</span></h1>
-              <p className="text-sm text-muted-foreground">Your Projects Dashboard</p>
+              {/* هنا التعديل: إضافة by techpromts بجانب الاسم */}
+              <div className="flex items-baseline gap-2">
+                <h1 className="text-2xl font-bold">
+                  tech<span className="text-primary">buildz</span>
+                </h1>
+                <span className="text-sm font-medium text-muted-foreground">
+                  by techpromts
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">Your Projects Dashboard</p>
             </div>
           </div>
+          
           <button
             onClick={() => setIsModalOpen(true)}
             className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl transition-all shadow-glow flex items-center gap-2"
