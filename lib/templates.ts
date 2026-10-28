@@ -1,6 +1,12 @@
-export type Environment = "nextjs" | "react-vite" | "node" | "html";
+export type Environment = "nextjs" | "react-vite" | "node" | "html" | "empty";
 
 export const ENVIRONMENTS = [
+  {
+    id: "empty" as Environment,
+    name: "Empty Project",
+    description: "Start from scratch with zero files",
+    icon: "📁",
+  },
   {
     id: "nextjs" as Environment,
     name: "Next.js 15",
@@ -29,13 +35,14 @@ export const ENVIRONMENTS = [
 
 export const MODELS = [
   { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B (Recommended)" },
-  { id: "llama-3.1-70b-versatile", name: "Llama 3.1 70B" },
-  { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Fast)" },
-  { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B" },
-  { id: "gemma2-9b-it", name: "Gemma 2 9B" },
+  { id: "deepseek-r1-distill-llama-70b", name: "DeepSeek R1 70B (Smart)" },
+  { id: "qwen-2.5-coder-32b", name: "Qwen 2.5 Coder 32B (Best for Code)" },
+  { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Fastest)" },
 ];
 
 export function getInitialFiles(env: Environment): Record<string, string> {
+  if (env === "empty") return {};
+
   if (env === "nextjs") {
     return {
       "package.json": JSON.stringify(
@@ -49,7 +56,7 @@ export function getInitialFiles(env: Environment): Record<string, string> {
             start: "next start",
           },
           dependencies: {
-            next: "15.1.0",
+            next: "15.1.11",
             react: "^19.0.0",
             "react-dom": "^19.0.0",
           },
@@ -205,7 +212,6 @@ server.listen(3000, () => {
     };
   }
 
-  // HTML default
   return {
     "index.html": `<!DOCTYPE html>
 <html lang="en">
