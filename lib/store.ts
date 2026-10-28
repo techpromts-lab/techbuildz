@@ -58,7 +58,7 @@ export const useAppStore = create<AppState>()(
           files,
           activeFile: Object.keys(files)[0] || "", 
           messages: [], 
-          model: "gemini-2.5-flash", // التعديل هنا
+          model: "gemini-3.8-flash", // الموديل الافتراضي الجديد
           updatedAt: Date.now(),
         };
         set((s) => ({ projects: { ...s.projects, [id]: newProject }, activeProjectId: id }));
