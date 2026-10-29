@@ -10,7 +10,9 @@ function getKeys(): string[] {
 }
 
 function getNextKey(keys: string[]): string {
-  if (keys.length === 0) throw new Error("No Gemini API keys found. Please set GEMINI_API_KEY_1 in your environment variables.");
+  if (keys.length === 0) {
+    throw new Error("No Gemini API keys found. Please set GEMINI_API_KEY_1 in your environment variables.");
+  }
   const key = keys[currentKeyIndex % keys.length];
   currentKeyIndex = (currentKeyIndex + 1) % keys.length;
   return key;
@@ -21,14 +23,20 @@ export async function geminiChatCompletion(params: any) {
   const maxRetries = keys.length || 1;
   let lastError: any;
 
-  // تصحيح النموذج تلقائياً إذا كان الاسم خاطئاً أو مخزناً بشكل قديم
-  const validModels: Record<string, string> = {
-    "gemini-1.5-flash": "gemini-1.5-flash",
-    "gemini-1.5-pro": "gemini-1.5-pro",
-    "gemini-2.0-flash-exp": "gemini-2.0-flash-exp",
-    "gemini-1.5-flash-8b": "gemini-1.5-flash-8b",
+  let requestedModel = params.model || "gemini-2.5-flash";
+  if (requestedModel.startsWith("models/")) {
+    requestedModel = requestedModel.replace("models/", "");
+  }
+
+  const modelMap: Record<string, string> = {
+    "gemini-1.5-flash": "gemini-2.5-flash",
+    "gemini-1.5-pro": "gemini-2.5-pro",
+    "gemini-2.0-flash-exp": "gemini-2.5-flash",
+    "gemini-1.5-flash-8b": "gemini-2.5-flash-lite",
+    "gemini-3.8-flash": "gemini-2.5-flash",
   };
-  const activeModel = validModels[params.model] || "gemini-1.5-flash";
+
+  const activeModel = modelMap[requestedModel] || requestedModel;
 
   const systemMsg = params.messages.find((m: any) => m.role === "system")?.content || "";
   const chatMessages = params.messages.filter((m: any) => m.role !== "system");
