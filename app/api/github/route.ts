@@ -4,14 +4,12 @@ export async function POST(req: NextRequest) {
   try {
     const { files, repoName, description, isPrivate } = await req.json();
     const token = process.env.GITHUB_TOKEN;
-
     if (!token) {
       return NextResponse.json(
         { error: "GitHub token not configured. Add GITHUB_TOKEN in environment variables." },
         { status: 400 }
       );
     }
-
     const createRes = await fetch("https://api.github.com/user/repos", {
       method: "POST",
       headers: {
@@ -26,7 +24,6 @@ export async function POST(req: NextRequest) {
         auto_init: false,
       }),
     });
-
     if (!createRes.ok) {
       const err = await createRes.json();
       return NextResponse.json(
@@ -34,12 +31,9 @@ export async function POST(req: NextRequest) {
         { status: createRes.status }
       );
     }
-
     const repo = await createRes.json();
-
     for (const [path, content] of Object.entries(files as Record<string, string>)) {
       const encoded = Buffer.from(content).toString("base64");
-
       await fetch(
         `https://api.github.com/repos/${repo.full_name}/contents/${path}`,
         {
@@ -56,7 +50,6 @@ export async function POST(req: NextRequest) {
         }
       );
     }
-
     return NextResponse.json({
       success: true,
       url: repo.html_url,
