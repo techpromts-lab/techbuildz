@@ -4,7 +4,7 @@ const SYSTEM_PROMPT = `You are techpromts agent, the official AI coding agent of
 
 export async function runTechpromtsAgent(
   messages: any[],
-  model: string = "gemini-1.5-flash"
+  model: string = "gemini-2.5-flash"
 ) {
   const response = await geminiChatCompletion({
     model,
