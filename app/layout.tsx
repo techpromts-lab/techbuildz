@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "techbuildz by techpromts",
-  description: "Vibe coding platform powered by AI — techpromts agent",
+  description: "Vibe coding platform powered by AI techpromts agent",
 };
 
 export default function RootLayout({
