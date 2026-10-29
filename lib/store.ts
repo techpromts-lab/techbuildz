@@ -47,18 +47,17 @@ export const useAppStore = create<AppState>()(
       showSettings: false,
       viewMode: "split",
       isGenerating: false,
-
       createProject: (name, env) => {
         const id = crypto.randomUUID();
         const files = getInitialFiles(env);
         const newProject: Project = {
-          id, 
-          name: name || "Untitled Project", 
-          environment: env, 
+          id,
+          name: name || "Untitled Project",
+          environment: env,
           files,
-          activeFile: Object.keys(files)[0] || "", 
-          messages: [], 
-          model: "gemini-3.8-flash", // الموديل الافتراضي الجديد
+          activeFile: Object.keys(files)[0] || "",
+          messages: [],
+          model: "gemini-1.5-flash", 
           updatedAt: Date.now(),
         };
         set((s) => ({ projects: { ...s.projects, [id]: newProject }, activeProjectId: id }));
