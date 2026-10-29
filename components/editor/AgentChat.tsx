@@ -13,16 +13,16 @@ function extractFiles(text: string): Record<string, string> {
     out[match[1].trim()] = match[2].trim();
   }
   if (Object.keys(out).length === 0) {
-     const boldFileRegex = /\*\*`?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`?\*\*\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
-     while ((match = boldFileRegex.exec(text)) !== null) {
-       out[match[1].trim()] = match[2].trim();
-     }
+    const boldFileRegex = /\*\*`?([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`?\*\*\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
+    while ((match = boldFileRegex.exec(text)) !== null) {
+      out[match[1].trim()] = match[2].trim();
+    }
   }
   if (Object.keys(out).length === 0) {
-     const backtickFileRegex = /`([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
-     while ((match = backtickFileRegex.exec(text)) !== null) {
-       out[match[1].trim()] = match[2].trim();
-     }
+    const backtickFileRegex = /`([a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+)`\s*\n+```[a-zA-Z0-9]*\n([\s\S]*?)```/g;
+    while ((match = backtickFileRegex.exec(text)) !== null) {
+      out[match[1].trim()] = match[2].trim();
+    }
   }
   return out;
 }
@@ -33,9 +33,8 @@ export default function AgentChat() {
   const files = project?.files || {};
   const activeFile = project?.activeFile || "";
   const messages = project?.messages || [];
-  const model = project?.model || "gemini-3.8-flash"; // الموديل الافتراضي الجديد
+  const model = project?.model || "gemini-2.5-flash";
   const environment = project?.environment || "empty";
-
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +48,6 @@ export default function AgentChat() {
     setInput("");
     addMessage({ role: "user", content: text });
     setIsGenerating(true);
-
     try {
       const contextMsg = {
         role: "user" as const,
@@ -62,7 +60,7 @@ export default function AgentChat() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to get response from AI");
-      
+
       const reply: string = data.reply;
       addMessage({ role: "assistant", content: reply });
       const newFiles = extractFiles(reply);
