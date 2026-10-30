@@ -2,10 +2,8 @@
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// Tracks which key to start with next request (advanced only on success)
 let currentKeyIndex = 0;
 
-// Tracks keys that hit rate limit (cooldown for 60s)
 const exhaustedUntil: Record<string, number> = {};
 const COOLDOWN_MS = 60_000;
 
@@ -27,6 +25,24 @@ function markExhausted(key: string) {
   exhaustedUntil[key] = Date.now() + COOLDOWN_MS;
 }
 
+/**
+ * ✅ تحديد دقيق لـ rate limit — يعتمد على status code 429 أولاً
+ * ولا يعتمد على نص الرسالة إلا كـ fallback
+ */
+function isRateLimitError(status: number, message: string): boolean {
+  if (status === 429) return true;
+  const lower = message.toLowerCase();
+  // فقط لو لم يوجد status واضح (مثل 400/500) نستخدم النص
+  if (status >= 500 || status === 0) {
+    return (
+      lower.includes("rate limit") ||
+      lower.includes("quota exceeded") ||
+      lower.includes("too many requests")
+    );
+  }
+  return false;
+}
+
 export async function groqChatCompletion(params: any) {
   const keys = getKeys();
 
@@ -36,7 +52,6 @@ export async function groqChatCompletion(params: any) {
     );
   }
 
-  // Model mapping - accepts both short and full names
   const modelMap: Record<string, string> = {
     "gpt-oss-120b": "openai/gpt-oss-120b",
     "gpt-oss-20b": "openai/gpt-oss-20b",
@@ -47,7 +62,6 @@ export async function groqChatCompletion(params: any) {
   const requestedModel = params.model || "openai/gpt-oss-120b";
   const activeModel = modelMap[requestedModel] || "openai/gpt-oss-120b";
 
-  // Groq is OpenAI-compatible (including system role)
   const messages = params.messages.map((m: any) => ({
     role: m.role,
     content: m.content,
@@ -63,19 +77,18 @@ export async function groqChatCompletion(params: any) {
 
   let lastError: any;
 
-  // Try each key exactly once, starting from current index (Round-Robin)
   for (let attempt = 0; attempt < keys.length; attempt++) {
     const idx = (currentKeyIndex + attempt) % keys.length;
     const apiKey = keys[idx];
 
-    // Skip keys that are cooling down
     if (isExhausted(apiKey)) {
       console.log(`[groq] Key #${idx + 1} cooling down, skipping`);
       continue;
     }
 
+    let res: Response;
     try {
-      const res = await fetch(GROQ_BASE_URL, {
+      res = await fetch(GROQ_BASE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -83,61 +96,40 @@ export async function groqChatCompletion(params: any) {
         },
         body: JSON.stringify(payload),
       });
-
-      // Success
-      if (res.ok) {
-        const data = await res.json();
-        const replyText = data.choices?.[0]?.message?.content || "";
-
-        // Advance index for next request (even load distribution)
-        currentKeyIndex = (idx + 1) % keys.length;
-
-        console.log(`[groq] Success with key #${idx + 1}`);
-        return { choices: [{ message: { content: replyText } }] };
-      }
-
-      // Failure - inspect error type
-      const err = await res.json().catch(() => ({}));
-      const message = err?.error?.message || `Groq API Error (${res.status})`;
-      const lower = message.toLowerCase();
-
-      const isRateLimit =
-        res.status === 429 ||
-        lower.includes("rate limit") ||
-        lower.includes("quota") ||
-        lower.includes("too many requests");
-
-      if (isRateLimit) {
-        console.warn(
-          `[groq] Key #${idx + 1} hit rate limit, switching to next...`
-        );
-        markExhausted(apiKey);
-        lastError = new Error(message);
-        continue; // try next key
-      }
-
-      // Non-retryable error (auth, model not found, invalid request...)
-      throw new Error(message);
-    } catch (error: any) {
-      lastError = error;
-      const msg = (error?.message || "").toLowerCase();
-
-      // Only continue if it was a rate limit error
-      if (
-        msg.includes("rate limit") ||
-        msg.includes("quota") ||
-        msg.includes("too many requests")
-      ) {
-        markExhausted(apiKey);
-        continue;
-      }
-
-      // Any other error - throw immediately
-      throw error;
+    } catch (networkErr: any) {
+      // شبكة — لا تحرق المفتاح، ارمِ الخطأ
+      lastError = networkErr;
+      throw new Error(
+        `[groq] Network error: ${networkErr?.message || "unknown"}`
+      );
     }
+
+    if (res.ok) {
+      const data = await res.json();
+      const replyText = data.choices?.[0]?.message?.content || "";
+      currentKeyIndex = (idx + 1) % keys.length;
+      console.log(`[groq] Success with key #${idx + 1}`);
+      return { choices: [{ message: { content: replyText } }] };
+    }
+
+    const err = await res.json().catch(() => ({}));
+    const message =
+      err?.error?.message || `Groq API Error (${res.status})`;
+
+    // ✅ كشف دقيق
+    if (isRateLimitError(res.status, message)) {
+      console.warn(
+        `[groq] Key #${idx + 1} hit rate limit (status ${res.status}), switching...`
+      );
+      markExhausted(apiKey);
+      lastError = new Error(message);
+      continue;
+    }
+
+    // خطأ غير قابل لإعادة المحاولة (auth / model not found / bad request)
+    throw new Error(message);
   }
 
-  // All keys exhausted or cooling down
   throw new Error(
     `All ${keys.length} Groq key(s) exhausted rate limits. Last error: ${
       lastError?.message || "unknown"
