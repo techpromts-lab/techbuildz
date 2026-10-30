@@ -1,9 +1,11 @@
 import { WebContainer } from "@webcontainer/api";
 
-let instance: WebContainer | null = null;
+let bootPromise: Promise<WebContainer> | null = null;
 
 export async function getWebContainer() {
-  if (instance) return instance;
-  instance = await WebContainer.boot({ coep: "require-corp" });
-  return instance;
+  if (!bootPromise) {
+    // تخزين الـ Promise يمنع أي استدعاء متزامن آخر من تشغيل الأداة مرة أخرى
+    bootPromise = WebContainer.boot({ coep: "require-corp" });
+  }
+  return bootPromise;
 }
