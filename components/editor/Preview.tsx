@@ -83,18 +83,22 @@ export default function Preview() {
     setError(null);
     setUrl(null);
     killProcesses();
+
     if (!hasAnyFiles) {
       setStatus("idle");
       return;
     }
+    
     if (isStaticHtml) {
       setStatus("ready");
       return;
     }
+    
     if (!files["package.json"]) {
       setStatus("idle");
       return;
     }
+    
     try {
       const scripts = JSON.parse(files["package.json"]).scripts || {};
       if (!scripts.dev) {
@@ -107,38 +111,51 @@ export default function Preview() {
       setStatus("error");
       return;
     }
+
     try {
       if (runId !== runIdRef.current) return;
       setStatus("booting");
       const wc = await getWebContainer();
+      
       if (runId !== runIdRef.current) return;
       const envKey = `${activeProjectId}-${environment}`;
+      
       if (installedEnvRef.current !== envKey) {
         setStatus("mounting");
-        await wc.mount(
-          Object.fromEntries(
-            Object.entries(files).map(([path, content]) => [
-              path,
-              { file: { contents: content } },
-            ])
-          )
-        );
+        
+        // تحويل المسارات إلى شجرة مجلدات مناسبة لـ WebContainer
+        const tree: Record<string, any> = {};
+        for (const [path, content] of Object.entries(files)) {
+          const parts = path.split('/');
+          let current = tree;
+          for (let i = 0; i < parts.length - 1; i++) {
+            if (!current[parts[i]]) current[parts[i]] = { directory: {} };
+            current = current[parts[i]].directory;
+          }
+          current[parts[parts.length - 1]] = { file: { contents: content } };
+        }
+
+        await wc.mount(tree);
         installedEnvRef.current = envKey;
       }
+      
       if (runId !== runIdRef.current) return;
       setStatus("installing");
       const install = await wc.spawn("npm", ["install"]);
       installProcessRef.current = install;
       install.output.pipeTo(new WritableStream({ write: (d) => console.log(d) })).catch(() => {});
       const installExit = await install.exit;
+      
       if (runId !== runIdRef.current) return;
       if (installExit !== 0) {
         throw new Error(`npm install failed (exit code ${installExit})`);
       }
+      
       setStatus("starting");
       const dev = await wc.spawn("npm", ["run", "dev"]);
       devProcessRef.current = dev;
       dev.output.pipeTo(new WritableStream({ write: (d) => console.log(d) })).catch(() => {});
+      
       dev.exit
         .then((code: number) => {
           if (runId !== runIdRef.current) return;
@@ -158,7 +175,7 @@ export default function Preview() {
       setError(e.message || "Failed to start preview");
       setStatus("error");
     }
-  }
+  } // إغلاق دالة run
 
   useEffect(() => {
     run();
