@@ -1,5 +1,4 @@
 "use client";
-
 import Editor from "@monaco-editor/react";
 import { useAppStore } from "@/lib/store";
 
@@ -32,12 +31,7 @@ export default function CodeEditor() {
       <div className="h-9 flex items-center px-4 border-b border-border bg-card/50 text-xs text-muted-foreground">
         <span className="font-mono">{activeFile}</span>
       </div>
-      <Editor
-        height="calc(100% - 36px)"
-        language={language}
-        value={content}
-        theme="vs-dark"
-        onChange={(value) => {
+      <Editor height="calc(100% - 36px)" language="{language}" onChange="{(value)" theme="vs-dark" value="{content}"> {
           if (value !== undefined) updateFile(activeFile, value);
         }}
         options={{
