@@ -33,7 +33,7 @@ export default function AgentChat() {
   const files = project?.files || {};
   const activeFile = project?.activeFile || "";
   const messages = project?.messages || [];
-  const model = project?.model || "gemini-2.5-flash";
+  const model = project?.model || "openai/gpt-oss-120b";
   const environment = project?.environment || "empty";
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
