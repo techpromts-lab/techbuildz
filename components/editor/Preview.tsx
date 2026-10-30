@@ -33,7 +33,10 @@ export default function Preview() {
   const installProcessRef = useRef<KilledableProcess | null>(null);
   const devProcessRef = useRef<KilledableProcess | null>(null);
 
+  // التحقق من وجود ملفات
   const hasAnyFiles = Object.keys(files).length > 0;
+  
+  // التحقق إذا كان المشروع HTML عادي أو مشروع Node (Next.js / Vite)
   const isStaticHtml =
     environment === "html" ||
     (!files["package.json"] && Boolean(files["index.html"]));
@@ -92,21 +95,25 @@ export default function Preview() {
     setError(null);
     setUrl(null);
 
-    if (Object.keys(files).length === 0) {
+    // 1. إذا لم توجد ملفات، توقف
+    if (!hasAnyFiles) {
       setStatus("idle");
       return;
     }
 
+    // 2. إذا كان HTML عادي، اعرضه مباشرة
     if (isStaticHtml) {
       setStatus("ready");
       return;
     }
 
+    // 3. إذا لم يوجد package.json (ملفات غير مكتملة)
     if (!files["package.json"]) {
       setStatus("idle");
       return;
     }
 
+    // 4. التأكد من وجود سكربت التشغيل
     try {
       const scripts = JSON.parse(files["package.json"]).scripts || {};
       if (!scripts.dev) {
@@ -120,6 +127,7 @@ export default function Preview() {
       return;
     }
 
+    // 5. تشغيل WebContainer
     try {
       killProcesses();
       if (runId !== runIdRef.current) return;
@@ -182,6 +190,7 @@ export default function Preview() {
     }
   }
 
+  // إعادة التشغيل عند تغير البيئة، المشروع، أو إضافة ملفات جديدة لأول مرة
   useEffect(() => {
     run();
     return () => {
@@ -190,6 +199,7 @@ export default function Preview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [environment, activeProjectId, hasAnyFiles]);
 
+  // مزامنة التعديلات مع بيئة التشغيل
   useEffect(() => {
     if (isStaticHtml) return;
     if (installedEnvRef.current !== `${activeProjectId}-${environment}`) return;
@@ -214,6 +224,7 @@ export default function Preview() {
     run();
   }
 
+  // واجهة المستخدم
   if (!hasAnyFiles) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground">
