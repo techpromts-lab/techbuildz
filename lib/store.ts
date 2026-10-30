@@ -57,7 +57,7 @@ export const useAppStore = create<AppState>()(
           files,
           activeFile: Object.keys(files)[0] || "",
           messages: [],
-          model: "gemini-2.5-flash",
+          model: "openai/gpt-oss-120b",
           updatedAt: Date.now(),
         };
         set((s) => ({
@@ -138,7 +138,6 @@ export const useAppStore = create<AppState>()(
             },
           };
         }),
-      // ---- FIX: environment change resets files + clears messages ----
       setEnvironment: (env) =>
         set((s) => {
           const p = s.projects[s.activeProjectId!];
