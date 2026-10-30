@@ -1,11 +1,11 @@
 export type Environment = "nextjs" | "react-vite" | "node" | "html" | "empty";
 
 export const ENVIRONMENTS = [
-  { id: "empty" as Environment, name: "Empty Project", description: "Start from scratch with zero files", icon: "📄" },
-  { id: "nextjs" as Environment, name: "Next.js 15", description: "App Router + TypeScript + Tailwind", icon: "⚡" },
-  { id: "react-vite" as Environment, name: "React + Vite", description: "Fast React with Vite", icon: "⚛️" },
-  { id: "node" as Environment, name: "Node.js", description: "Express / plain Node", icon: "🟢" },
-  { id: "html" as Environment, name: "HTML / CSS / JS", description: "Simple static site", icon: "🌐" },
+  { id: "empty" as Environment, name: "Empty Project", description: "Start from scratch with zero files", icon: " " },
+  { id: "nextjs" as Environment, name: "Next.js 15", description: "App Router + TypeScript + Tailwind", icon: " " },
+  { id: "react-vite" as Environment, name: "React + Vite", description: "Fast React with Vite", icon: " " },
+  { id: "node" as Environment, name: "Node.js", description: "Express / plain Node", icon: " " },
+  { id: "html" as Environment, name: "HTML / CSS / JS", description: "Simple static site", icon: " " },
 ];
 
 export const MODELS = [
@@ -28,7 +28,7 @@ export function getInitialFiles(env: Environment): Record<string, string> {
     return {
       "package.json": JSON.stringify({ name: "techbuildz-react", private: true, version: "0.0.0", type: "module", scripts: { dev: "vite --port 3000", build: "vite build", preview: "vite preview" }, dependencies: { react: "^19.0.0", "react-dom": "^19.0.0" }, devDependencies: { "@vitejs/plugin-react": "^4.3.4", vite: "^6.0.3" } }, null, 2),
       "index.html": `<!DOCTYPE html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>techbuildz</title>\n  </head>\n  <body>\n    <div id="root"></div>\n    <script type="module" src="/src/main.jsx"></script>\n  </body>\n</html>\n`,
-      "src/main.jsx": `import { createRoot } from "react-dom/client";\nimport App from "./App";\n\ncreateRoot(document.getElementById("root")).render(<App />);\n`,
+      "src/main.jsx": `import { createRoot } from "react-dom/client";\nimport App from "./App";\n\ncreateRoot(document.getElementById("root")).render(<App/>);\n`,
       "src/App.jsx": `export default function App() {\n  return (\n    <div style={{ padding: 40, fontFamily: "system-ui" }}>\n      <h1>Welcome to techbuildz</h1>\n      <p>React + Vite is ready.</p>\n    </div>\n  );\n}\n`,
       "vite.config.js": `import { defineConfig } from "vite";\nimport react from "@vitejs/plugin-react";\n\nexport default defineConfig({\n  plugins: [react()],\n  server: { port: 3000 },\n});\n`,
     };
