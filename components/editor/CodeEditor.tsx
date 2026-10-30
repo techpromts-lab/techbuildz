@@ -31,7 +31,12 @@ export default function CodeEditor() {
       <div className="h-9 flex items-center px-4 border-b border-border bg-card/50 text-xs text-muted-foreground">
         <span className="font-mono">{activeFile}</span>
       </div>
-      <Editor height="calc(100% - 36px)" language="{language}" onChange="{(value)" theme="vs-dark" value="{content}"> {
+      <Editor
+        height="calc(100% - 36px)"
+        language={language}
+        theme="vs-dark"
+        value={content}
+        onChange={(value) => {
           if (value !== undefined) updateFile(activeFile, value);
         }}
         options={{
