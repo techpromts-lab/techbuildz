@@ -9,10 +9,8 @@ export const ENVIRONMENTS = [
 ];
 
 export const MODELS = [
-  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Recommended)" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Powerful)" },
-  { id: "gemini-flash-latest", name: "Gemini Flash Latest" },
-  { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite" },
+  { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B (Recommended)" },
+  { id: "openai/gpt-oss-20b", name: "GPT-OSS 20B (Fast & Cheap)" },
 ];
 
 export function getInitialFiles(env: Environment): Record<string, string> {
