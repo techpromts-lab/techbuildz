@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +10,6 @@ import { cn } from "@/lib/utils";
 export default function HomePage() {
   const router = useRouter();
   const { projects, createProject, deleteProject } = useAppStore();
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("My Awesome Project");
   const [selectedEnv, setSelectedEnv] = useState<Environment>("empty");
@@ -31,7 +29,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
-      
+             
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-12 space-y-12">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -40,7 +38,6 @@ export default function HomePage() {
               <Code2 className="w-7 h-7 text-white" />
             </div>
             <div>
-              {/* هنا التعديل: إضافة by techpromts بجانب الاسم */}
               <div className="flex items-baseline gap-2">
                 <h1 className="text-2xl font-bold">
                   tech<span className="text-primary">buildz</span>
@@ -52,7 +49,7 @@ export default function HomePage() {
               <p className="text-xs text-muted-foreground mt-0.5">Your Projects Dashboard</p>
             </div>
           </div>
-          
+                     
           <button
             onClick={() => setIsModalOpen(true)}
             className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl transition-all shadow-glow flex items-center gap-2"
@@ -70,7 +67,6 @@ export default function HomePage() {
               <p className="text-lg">No projects yet. Start building your first app!</p>
             </div>
           )}
-
           {projectList.map((project) => (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
