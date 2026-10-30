@@ -1,19 +1,10 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { getWebContainer } from "@/lib/webcontainer";
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react";
 
-type Status =
-  | "idle"
-  | "booting"
-  | "mounting"
-  | "installing"
-  | "starting"
-  | "ready"
-  | "error";
-
+type Status = "idle" | "booting" | "mounting" | "installing" | "starting" | "ready" | "error";
 type KillableProcess = { kill: () => void };
 
 export default function Preview() {
@@ -21,28 +12,23 @@ export default function Preview() {
   const project = projects[activeProjectId || ""];
   const files = project?.files || {};
   const environment = project?.environment || "empty";
-
   const [url, setUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
-
+  
   const runIdRef = useRef(0);
   const statusRef = useRef<Status>("idle");
   const installedEnvRef = useRef<string | null>(null);
   const installProcessRef = useRef<KillableProcess | null>(null);
   const devProcessRef = useRef<KillableProcess | null>(null);
-
+  
   const hasAnyFiles = Object.keys(files).length > 0;
-
-  const isStaticHtml =
-    environment === "html" ||
-    (!files["package.json"] && Boolean(files["index.html"]));
+  const isStaticHtml = environment === "html" || (!files["package.json"] && Boolean(files["index.html"]));
 
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
-  // server-ready listener
   useEffect(() => {
     const alive = { value: true };
     getWebContainer()
@@ -56,21 +42,15 @@ export default function Preview() {
         });
       })
       .catch((e) => console.error("[preview listener]", e));
-
     return () => {
       alive.value = false;
     };
   }, []);
 
-  // ✅ تنظيف العمليات عند unmount فقط (منع تسريب العمليات بين الصفحات)
   useEffect(() => {
     return () => {
-      try {
-        installProcessRef.current?.kill?.();
-      } catch {}
-      try {
-        devProcessRef.current?.kill?.();
-      } catch {}
+      try { installProcessRef.current?.kill?.(); } catch {}
+      try { devProcessRef.current?.kill?.(); } catch {}
       installProcessRef.current = null;
       devProcessRef.current = null;
       runIdRef.current++;
@@ -78,9 +58,7 @@ export default function Preview() {
   }, []);
 
   const escapeForInline = (code: string) =>
-    code
-      .replace(/<\/script>/gi, "<\\/script>")
-      .replace(/<\/style>/gi, "<\\/style>");
+    code.replace(/<\/script>/gi, "<\\/script>").replace(/<\/style>/gi, "<\\/style>");
 
   const buildHtml = () => {
     const html = files["index.html"] || "";
@@ -89,23 +67,13 @@ export default function Preview() {
     const safeCss = escapeForInline(css);
     const safeJs = escapeForInline(js);
     return html
-      .replace(
-        /<link[^>]*href=["']\.?\/?style\.css["'][^>]*\/?>/i,
-        `<style>${safeCss}</style>`
-      )
-      .replace(
-        /<script[^>]*src=["']\.?\/?script\.js["'][^>]*><\/script>/i,
-        `<script>${safeJs}</script>`
-      );
+      .replace(/<link[^>]*href=["']\.?\/?style\.css["'][^>]*\/?>/i, `<style>${safeCss}</style>`)
+      .replace(/<script[^>]*src=["']\.?\/?script\.js["'][^>]*><\/script>/i, `<script>${safeJs}</script>`);
   };
 
   const killProcesses = () => {
-    try {
-      installProcessRef.current?.kill?.();
-    } catch {}
-    try {
-      devProcessRef.current?.kill?.();
-    } catch {}
+    try { installProcessRef.current?.kill?.(); } catch {}
+    try { devProcessRef.current?.kill?.(); } catch {}
     installProcessRef.current = null;
     devProcessRef.current = null;
   };
@@ -114,25 +82,19 @@ export default function Preview() {
     const runId = ++runIdRef.current;
     setError(null);
     setUrl(null);
-
-    // ✅ اقتل العمليات القديمة قبل أي early return
     killProcesses();
-
     if (!hasAnyFiles) {
       setStatus("idle");
       return;
     }
-
     if (isStaticHtml) {
       setStatus("ready");
       return;
     }
-
     if (!files["package.json"]) {
       setStatus("idle");
       return;
     }
-
     try {
       const scripts = JSON.parse(files["package.json"]).scripts || {};
       if (!scripts.dev) {
@@ -145,14 +107,11 @@ export default function Preview() {
       setStatus("error");
       return;
     }
-
     try {
       if (runId !== runIdRef.current) return;
-
       setStatus("booting");
       const wc = await getWebContainer();
       if (runId !== runIdRef.current) return;
-
       const envKey = `${activeProjectId}-${environment}`;
       if (installedEnvRef.current !== envKey) {
         setStatus("mounting");
@@ -167,25 +126,19 @@ export default function Preview() {
         installedEnvRef.current = envKey;
       }
       if (runId !== runIdRef.current) return;
-
       setStatus("installing");
       const install = await wc.spawn("npm", ["install"]);
       installProcessRef.current = install;
-      install.output
-        .pipeTo(new WritableStream({ write: (d) => console.log(d) }))
-        .catch(() => {});
+      install.output.pipeTo(new WritableStream({ write: (d) => console.log(d) })).catch(() => {});
       const installExit = await install.exit;
       if (runId !== runIdRef.current) return;
       if (installExit !== 0) {
         throw new Error(`npm install failed (exit code ${installExit})`);
       }
-
       setStatus("starting");
       const dev = await wc.spawn("npm", ["run", "dev"]);
       devProcessRef.current = dev;
-      dev.output
-        .pipeTo(new WritableStream({ write: (d) => console.log(d) }))
-        .catch(() => {});
+      dev.output.pipeTo(new WritableStream({ write: (d) => console.log(d) })).catch(() => {});
       dev.exit
         .then((code: number) => {
           if (runId !== runIdRef.current) return;
@@ -212,10 +165,8 @@ export default function Preview() {
     return () => {
       runIdRef.current++;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [environment, activeProjectId, hasAnyFiles]);
 
-  // مزامنة التعديلات مع بيئة التشغيل
   useEffect(() => {
     if (isStaticHtml) return;
     if (installedEnvRef.current !== `${activeProjectId}-${environment}`) return;
@@ -231,7 +182,6 @@ export default function Preview() {
       }
     }, 800);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, status]);
 
   function fullRestart() {
@@ -243,9 +193,7 @@ export default function Preview() {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground">
         <p className="text-sm">Nothing to preview.</p>
-        <p className="text-xs mt-1">
-          Create files or ask the AI to generate code.
-        </p>
+        <p className="text-xs mt-1">Create files or ask the AI to generate code.</p>
       </div>
     );
   }
@@ -298,11 +246,7 @@ export default function Preview() {
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
-      <iframe
-        className="w-full h-full border-0"
-        src={url}
-        title="preview"
-      />
+      <iframe className="w-full h-full border-0" src={url} title="preview" />
     </div>
   );
 }
