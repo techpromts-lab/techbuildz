@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import Toolbar from "@/components/editor/Toolbar";
@@ -14,19 +14,32 @@ import { Loader2 } from "lucide-react";
 export default function ProjectPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
-  const { projects, activeProjectId, setActiveProjectId, viewMode, showChat } = useAppStore();
+  const {
+    projects,
+    activeProjectId,
+    setActiveProjectId,
+    viewMode,
+    showChat,
+  } = useAppStore();
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const project = projects[id];
 
   useEffect(() => {
+    if (!mounted) return;
     if (!project) {
       router.push("/");
     } else if (activeProjectId !== id) {
       setActiveProjectId(id);
     }
-  }, [id, project, activeProjectId, setActiveProjectId, router]);
+  }, [mounted, id, project, activeProjectId, setActiveProjectId, router]);
 
-  if (!project) {
+  // Don't render children until store is hydrated AND activeProjectId matches URL
+  if (!mounted || !project || activeProjectId !== id) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -45,13 +58,21 @@ export default function ProjectPage() {
 
         <div className="flex-1 flex overflow-hidden">
           {(viewMode === "code" || viewMode === "split") && (
-            <div className={`${viewMode === "split" ? "w-1/2" : "w-full"} border-r border-border overflow-hidden`}>
+            <div
+              className={`${
+                viewMode === "split" ? "w-1/2" : "w-full"
+              } border-r border-border overflow-hidden`}
+            >
               <CodeEditor />
             </div>
           )}
 
           {(viewMode === "preview" || viewMode === "split") && (
-            <div className={`${viewMode === "split" ? "w-1/2" : "w-full"} overflow-hidden`}>
+            <div
+              className={`${
+                viewMode === "split" ? "w-1/2" : "w-full"
+              } overflow-hidden`}
+            >
               <Preview />
             </div>
           )}
