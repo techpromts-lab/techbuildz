@@ -27,18 +27,21 @@ export default function Preview() {
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // --- Lifecycle guards (fix #1: listener leak + process leak) ---
   const runIdRef = useRef(0);
   const statusRef = useRef<Status>("idle");
   const installedEnvRef = useRef<string | null>(null);
   const installProcessRef = useRef<KilledableProcess | null>(null);
   const devProcessRef = useRef<KilledableProcess | null>(null);
 
+  const hasAnyFiles = Object.keys(files).length > 0;
+  const isStaticHtml =
+    environment === "html" ||
+    (!files["package.json"] && Boolean(files["index.html"]));
+
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
-  // Register server-ready listener ONCE per mount (not per run)
   useEffect(() => {
     const alive = { value: true };
     getWebContainer()
@@ -62,7 +65,6 @@ export default function Preview() {
     const html = files["index.html"] || "";
     const css = files["style.css"] || "";
     const js = files["script.js"] || "";
-    // More tolerant than exact-string replace
     return html
       .replace(
         /<link[^>]*href=["']\.?\/?style\.css["'][^>]*\/?>/i,
@@ -90,13 +92,31 @@ export default function Preview() {
     setError(null);
     setUrl(null);
 
-    if (environment === "empty" || Object.keys(files).length === 0) {
+    if (Object.keys(files).length === 0) {
       setStatus("idle");
       return;
     }
 
-    if (environment === "html") {
+    if (isStaticHtml) {
       setStatus("ready");
+      return;
+    }
+
+    if (!files["package.json"]) {
+      setStatus("idle");
+      return;
+    }
+
+    try {
+      const scripts = JSON.parse(files["package.json"]).scripts || {};
+      if (!scripts.dev) {
+        setError("No 'dev' script found in package.json");
+        setStatus("error");
+        return;
+      }
+    } catch {
+      setError("Invalid package.json (parse error)");
+      setStatus("error");
       return;
     }
 
@@ -165,15 +185,13 @@ export default function Preview() {
   useEffect(() => {
     run();
     return () => {
-      // Invalidate in-flight runs on unmount
       runIdRef.current++;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [environment, activeProjectId]);
+  }, [environment, activeProjectId, hasAnyFiles]);
 
-  // Sync edited files into the running container
   useEffect(() => {
-    if (environment === "html") return;
+    if (isStaticHtml) return;
     if (installedEnvRef.current !== `${activeProjectId}-${environment}`) return;
     if (status !== "ready") return;
     const timer = setTimeout(async () => {
@@ -196,7 +214,7 @@ export default function Preview() {
     run();
   }
 
-  if (environment === "empty" || Object.keys(files).length === 0) {
+  if (!hasAnyFiles) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground">
         <p className="text-sm">Nothing to preview.</p>
@@ -207,7 +225,7 @@ export default function Preview() {
     );
   }
 
-  if (environment === "html") {
+  if (isStaticHtml) {
     return (
       <div className="h-full w-full bg-white">
         <iframe
