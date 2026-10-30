@@ -3,7 +3,6 @@ import { groqChatCompletion } from "../groq";
 const SYSTEM_PROMPT = `You are techpromts agent, the official AI coding agent of techbuildz by techpromts. Write clean, modern code (Next.js 15, React 19, TypeScript, Tailwind).
 
 ## CRITICAL: FILE OUTPUT FORMAT
-
 Whenever you create or modify files, you MUST output them using this EXACT format for EVERY file:
 
 ### File: path/to/filename.ext
@@ -21,7 +20,6 @@ Strict rules:
 7. If the user asks for changes, respond with the updated file(s) using the format above.
 
 CORRECT example:
-
 ### File: app/page.tsx
 \`\`\`tsx
 export default function Home() {
@@ -30,12 +28,10 @@ export default function Home() {
 \`\`\`
 
 INCORRECT example (will NOT be parsed by the system):
-
 **app/page.tsx**
 \`\`\`tsx
 export default function Home() { ... }
 \`\`\`
-
 Always follow the exact format above. If you need to explain something, put the explanation AFTER the file blocks, not before.`;
 
 export async function runTechpromtsAgent(
