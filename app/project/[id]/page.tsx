@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
@@ -21,8 +20,8 @@ export default function ProjectPage() {
     viewMode,
     showChat,
   } = useAppStore();
-
   const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -38,7 +37,6 @@ export default function ProjectPage() {
     }
   }, [mounted, id, project, activeProjectId, setActiveProjectId, router]);
 
-  // Don't render children until store is hydrated AND activeProjectId matches URL
   if (!mounted || !project || activeProjectId !== id) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
@@ -50,12 +48,10 @@ export default function ProjectPage() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <Toolbar />
-
       <div className="flex-1 flex overflow-hidden">
         <div className="w-56 border-r border-border bg-card/30 shrink-0 hidden md:block">
           <FileTree />
         </div>
-
         <div className="flex-1 flex overflow-hidden">
           {(viewMode === "code" || viewMode === "split") && (
             <div
@@ -66,7 +62,6 @@ export default function ProjectPage() {
               <CodeEditor />
             </div>
           )}
-
           {(viewMode === "preview" || viewMode === "split") && (
             <div
               className={`${
@@ -77,14 +72,12 @@ export default function ProjectPage() {
             </div>
           )}
         </div>
-
         {showChat && (
           <div className="w-80 border-l border-border shrink-0 hidden lg:block">
             <AgentChat />
           </div>
         )}
       </div>
-
       <SettingsPanel />
     </div>
   );
