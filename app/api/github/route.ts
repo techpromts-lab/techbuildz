@@ -4,7 +4,6 @@ export async function POST(req: NextRequest) {
   try {
     const { files, repoName, description, isPrivate } = await req.json();
     const token = process.env.GITHUB_TOKEN;
-
     if (!token) {
       return NextResponse.json(
         {
@@ -14,7 +13,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
     const createRes = await fetch("https://api.github.com/user/repos", {
       method: "POST",
       headers: {
@@ -29,7 +27,6 @@ export async function POST(req: NextRequest) {
         auto_init: false,
       }),
     });
-
     if (!createRes.ok) {
       const err = await createRes.json().catch(() => ({}));
       return NextResponse.json(
@@ -37,10 +34,7 @@ export async function POST(req: NextRequest) {
         { status: createRes.status }
       );
     }
-
     const repo = await createRes.json();
-
-    // ✅ التحقق من نجاح رفع كل ملف
     const failed: { path: string; error: string }[] = [];
     for (const [path, content] of Object.entries(
       files as Record<string, string>
@@ -62,7 +56,6 @@ export async function POST(req: NextRequest) {
             }),
           }
         );
-
         if (!uploadRes.ok) {
           const uploadErr = await uploadRes.json().catch(() => ({}));
           failed.push({
@@ -74,7 +67,6 @@ export async function POST(req: NextRequest) {
         failed.push({ path, error: e?.message || "Unknown error" });
       }
     }
-
     if (failed.length > 0) {
       return NextResponse.json(
         {
@@ -87,7 +79,6 @@ export async function POST(req: NextRequest) {
         { status: 207 }
       );
     }
-
     return NextResponse.json({
       success: true,
       url: repo.html_url,
